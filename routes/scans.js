@@ -3,13 +3,15 @@ const router = express.Router();
 const Scan = require('../models/Scan');
 const Vulnerability = require('../models/Vulnerability');
 const VulnerabilityScanner = require('../utils/scanner');
+const NmapScanner = require('../utils/nmapScanner');
+const OpenVASScanner = require('../utils/openvasScanner'); 
 const emailService = require('../services/emailService');
 
 // @route   POST /api/scans
 // @desc    Start a new vulnerability scan
 router.post('/', async (req, res) => {
   try {
-    const { targetUrl, scanType = 'Quick' } = req.body;
+    const { targetUrl, scanType = 'Quick', scanMethod = 'Nmap' } = req.body;
 
     if (!targetUrl) {
       return res.status(400).json({ message: 'Target URL is required' });
@@ -23,12 +25,13 @@ router.post('/', async (req, res) => {
       startTime: new Date()
     });
 
-    // Run scan asynchronously
-    runScanAsync(scan._id, targetUrl);
+    // Run scan asynchronously with selected method
+    runScanAsync(scan._id, targetUrl, scanType, scanMethod);
 
     res.status(201).json({
       message: 'Scan started successfully',
       scanId: scan._id,
+      scanMethod,
       scan
     });
   } catch (error) {
@@ -38,10 +41,26 @@ router.post('/', async (req, res) => {
 });
 
 // Async function to run the scan
-async function runScanAsync(scanId, targetUrl) {
+// Async function to run the scan
+async function runScanAsync(scanId, targetUrl, scanType = 'Quick', scanMethod = 'Nmap') {
   try {
-    const scanner = new VulnerabilityScanner(targetUrl);
-    const vulnerabilities = await scanner.runFullScan();
+    let vulnerabilities = [];
+    
+    // Choose scanning method
+    // Choose scanning method
+if (scanMethod === 'Nmap') {
+  console.log('Using Nmap scanner...');
+  const nmapScanner = new NmapScanner(targetUrl);
+  vulnerabilities = await nmapScanner.runFullScan(scanType);
+} else if (scanMethod === 'OpenVAS') {
+  console.log('Using OpenVAS scanner...');
+  const openvasScanner = new OpenVASScanner(targetUrl);
+  vulnerabilities = await openvasScanner.runFullScan(scanType);
+} else {
+  console.log('Using Regex scanner...');
+  const regexScanner = new VulnerabilityScanner(targetUrl);
+  vulnerabilities = await regexScanner.runFullScan();
+}
 
     // Count vulnerabilities by severity
     let criticalCount = 0;
@@ -88,7 +107,8 @@ async function runScanAsync(scanId, targetUrl) {
       lowCount,
       scanResults: {
         vulnerabilitiesFound: vulnerabilities.length,
-        summary: 'Scan completed successfully'
+        summary: 'Scan completed successfully',
+        method: scanMethod
       }
     });
 
@@ -96,16 +116,18 @@ async function runScanAsync(scanId, targetUrl) {
     const completedScan = await Scan.findById(scanId);
     await emailService.sendScanCompleteNotification(completedScan, vulnerabilities.length);
 
-    console.log(`✓ Scan ${scanId} completed. Found ${vulnerabilities.length} vulnerabilities.`);
+    console.log(`✓ Scan ${scanId} completed using ${scanMethod}. Found ${vulnerabilities.length} vulnerabilities.`);
   } catch (error) {
     console.error('Error running scan:', error);
     await Scan.findByIdAndUpdate(scanId, {
       status: 'Failed',
-      endTime: new Date()
+      endTime: new Date(),
+      scanResults: {
+        error: error.message
+      }
     });
   }
 }
-
 // @route   GET /api/scans
 // @desc    Get all scans
 router.get('/', async (req, res) => {
