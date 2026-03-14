@@ -101,23 +101,6 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// @route   GET /api/attacks/:id
-// @desc    Get attack by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const attack = await AttackLog.findById(req.params.id);
-    
-    if (!attack) {
-      return res.status(404).json({ message: 'Attack log not found' });
-    }
-
-    res.json(attack);
-  } catch (error) {
-    console.error('Error fetching attack:', error);
-    res.status(500).json({ message: 'Error fetching attack', error: error.message });
-  }
-});
-
 // HONEYPOT ENDPOINTS - These are fake endpoints to trap attackers
 
 // @route   POST /api/honeypot/admin/login
@@ -193,6 +176,29 @@ router.post('/upload', async (req, res) => {
   });
 
   res.status(400).json({ message: 'Invalid file format' });
+});
+
+// @route   GET /api/attacks/:id
+// @desc    Get attack by ID
+router.get('/:id', async (req, res) => {
+  try {
+    // Validate if the ID is a valid MongoDB ObjectId
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid attack ID format' });
+    }
+
+    const attack = await AttackLog.findById(req.params.id);
+    
+    if (!attack) {
+      return res.status(404).json({ message: 'Attack log not found' });
+    }
+
+    res.json(attack);
+  } catch (error) {
+    console.error('Error fetching attack:', error);
+    res.status(500).json({ message: 'Error fetching attack', error: error.message });
+  }
 });
 
 module.exports = router;

@@ -95,15 +95,15 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  🛡️  Vulnerability Management & Honeypot Platform       ║
-║                    [UPGRADED VERSION]                     ║
-║                                                           ║
+║  🛡️  Vulnerability Management & Honeypot Platform          ║
+║                                                            ║
+║                                                            ║
 ║  Server running on port ${PORT}                            ║
 ║  Environment: ${process.env.NODE_ENV || 'development'}                              ║
-║                                                           ║
-║  🆕 NEW FEATURES:                                         ║
-║  ✓ WebSocket Real-time Updates                           ║
-║  ✓ PDF Report Generation                                 ║
+║                                                            ║
+║                                                            ║
+║  ✓ WebSocket Real-time Updates                            ║
+║  ✓ PDF Report Generation                                  ║
 ║  ✓ Email Alerts                                           ║
 ║  ✓ Scheduled Scans                                        ║
 ║  ✓ Attack Geolocation                                     ║
